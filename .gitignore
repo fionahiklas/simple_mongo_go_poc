@@ -1,2 +1,9 @@
+# Project files
+.idea
+*.iml
+
+# Binaries
 bin
 
+# Mongo
+mongodb
