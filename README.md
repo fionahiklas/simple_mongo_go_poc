@@ -28,7 +28,55 @@ mongo -u mongoadmin -p password --port 27017 --host 127.0.0.1 admin
 
 **NOTE:** You must connect to the `admin` database initially as that is where those credentials are setup
 
- 
+Create the database and a new user from the command line as follows
+
+```
+use persondb
+db.createUser(
+  {
+    user: "persondb",
+    pwd: "personpass",
+    roles: [
+       { role: "readWrite", db: "persondb" }
+    ],
+    passwordDigestor:"server"
+  }
+)
+```
+
+You can also update an existing user with new roles
+
+```
+use persondb
+db.updateUser("persondb",
+  {
+    roles: [
+       { role: "readWrite", db: "persondb" }
+    ]
+  }
+)
+
+```
+
+You can now exit and logon using the new credentials
+
+```
+mongo -u persondb -p personpass --port 27017 --host 127.0.0.1 persondb
+```
+
+Adding test data to the DB
+
+```
+db.person.insert({
+  id: "00001",
+  firstname: "Angua",
+  lastname: "Von Uberwald",
+    address: {
+      city: "Ankh Morpork",
+      state: "The Shades"
+    }
+})
+```
 
 ### GoLang
 

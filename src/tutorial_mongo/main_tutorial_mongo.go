@@ -6,8 +6,9 @@ import (
     "github.com/bestmethod/logger"
     "net/http"
     "syscall"
-    "gopkg.in/mgo.v2"
-    "gopkg.in/mgo.v2/bson"
+    "os"
+    mgo "gopkg.in/mgo.v2"
+    // bson "gopkg.in/mgo.v2/bson"
 )
 
 // The person Type (more like an object)
@@ -68,6 +69,7 @@ func DeletePerson(w http.ResponseWriter, r *http.Request) {
 }
 
 var log *Logger.Logger
+var database *mgo.Database
 
 func init() {
   log = new(Logger.Logger)
@@ -81,7 +83,7 @@ func init() {
 func main() {
   argsWithoutProg := os.Args[1:]
 
-  log.Debug("Command line arguments: %s", argsWithoutProg := os.Args[1:])
+  log.Debug("Command line arguments: %s", argsWithoutProg)
 
   host := argsWithoutProg[0]
   port := argsWithoutProg[1]
@@ -97,11 +99,11 @@ func main() {
   session, mongoSessionError := mgo.Dial(host + ":" + port)
 
   if mongoSessionError != nil {
-    log.Fatal(1, "Failed to connect to MongoDB: %s", mongoSessionError)
+    log.Fatalf(1, "Failed to connect to MongoDB: %s", mongoSessionError)
   }
 
   log.Debug("Getting database ...")
-  database, mongoDatabaseError = session.DB("persondb")
+  database = session.DB("persondb")
 
   router := mux.NewRouter()
   router.HandleFunc("/people", GetPeople).Methods("GET")
