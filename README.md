@@ -159,3 +159,16 @@ Pass the connection details for Mongo
 ```
 bin/tutorial_mongo localhost 27017 persondb personpass
 ```
+
+You can make curl requests to retreive data
+
+```
+curl -vvv http://localhost:8000/people
+```
+
+The above gets all of the entries in the DB
+The following gets a specific ID (our ID not the internal Mongo one)
+
+```
+curl -vvv http://localhost:8000/people/00002
+```

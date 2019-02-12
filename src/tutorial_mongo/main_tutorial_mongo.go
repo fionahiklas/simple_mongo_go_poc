@@ -29,7 +29,7 @@ var people []Person
 func GetPeople(w http.ResponseWriter, r *http.Request) {
     log.Debug("GetPeople request, threadId: %d", syscall.Gettid())
 
-    queryResult := database.C("people").Find(bson.M{})
+    queryResult := database.C("person").Find(bson.M{})
     count, _ := queryResult.Count()
     log.Debug("Queried database and found %d entries", count)
     iterator := queryResult.Iter()
@@ -44,21 +44,23 @@ func GetPeople(w http.ResponseWriter, r *http.Request) {
     for iterator.Next(&result) {
       encoder.Encode(result)
     }
-
-
 }
 
 // Display a single data
 func GetPerson(w http.ResponseWriter, r *http.Request) {
     log.Debug("GetPerson request, threadId: %d", syscall.Gettid())
     params := mux.Vars(r)
-    for _, item := range people {
-        if item.ID == params["id"] {
-            json.NewEncoder(w).Encode(item)
-            return
-        }
+    idToSearchFor := params["id"]
+
+    var result Person
+    queryError := database.C("person").Find(bson.M{ "id": idToSearchFor }).One(&result)
+
+    if queryError != nil {
+      log.Error("Error finding row for '%s', failure: '%s'", idToSearchFor, queryError)
+    } else {
+      log.Debug("Found an entry for ID: %s", idToSearchFor)
+      json.NewEncoder(w).Encode(result)
     }
-    json.NewEncoder(w).Encode(&Person{})
 }
 
 // create a new item
