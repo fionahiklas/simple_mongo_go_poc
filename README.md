@@ -7,7 +7,6 @@ Also using [go-logger](https://github.com/bestmethod/go-logger)
 
 Also referring to this example of a [mongo go application](https://labix.org/mgo)
 
-
 ## Setup
 
 ### Docker Mongo
@@ -78,6 +77,34 @@ db.person.insert({
 })
 ```
 
+And another
+
+```
+db.person.insert({
+  id: "00002",
+  firstname: "Agnes",
+  lastname: "Nitt",
+    address: {
+      city: "Mad Stoat",
+      state: "Lancre"
+    }
+})
+```
+
+And one more
+
+```
+db.person.insert({
+  id: "00003",
+  firstname: "Polly",
+  lastname: "Perks",
+    address: {
+      city: "Munz",
+      state: "Borogravia"
+    }
+})
+```
+
 ### GoLang
 
 Firstly you need GoLang - this may be available from the MDM self service (if you have one of those laptops) or from the language [site](https://golang.org) the Ubuntu 18.04 VM I'm using has golang version 1.10.4 in the main repo so it can simply be installed with `apt install`.
@@ -123,4 +150,12 @@ data rather than using hard-coded values.
 
 ```
 go install tutorial_mongo
+```
+
+### Run
+
+Pass the connection details for Mongo
+
+```
+bin/tutorial_mongo localhost 27017 persondb personpass
 ```

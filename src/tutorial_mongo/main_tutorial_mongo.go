@@ -8,7 +8,7 @@ import (
     "syscall"
     "os"
     mgo "gopkg.in/mgo.v2"
-    // bson "gopkg.in/mgo.v2/bson"
+    bson "gopkg.in/mgo.v2/bson"
 )
 
 // The person Type (more like an object)
@@ -28,7 +28,24 @@ var people []Person
 // Display all from the people var
 func GetPeople(w http.ResponseWriter, r *http.Request) {
     log.Debug("GetPeople request, threadId: %d", syscall.Gettid())
-    json.NewEncoder(w).Encode(people)
+
+    queryResult := database.C("people").Find(bson.M{})
+    count, _ := queryResult.Count()
+    log.Debug("Queried database and found %d entries", count)
+    iterator := queryResult.Iter()
+    defer func() {
+      log.Debug("Closing iterator for results")
+      closeErr := iterator.Close()
+      if closeErr != nil { log.Debug("Got error, %s", closeErr) }
+    }() // Yeah, this is confusing syntax, declared and then called anonymous function
+
+    var result Person
+    encoder := json.NewEncoder(w)
+    for iterator.Next(&result) {
+      encoder.Encode(result)
+    }
+
+
 }
 
 // Display a single data
@@ -104,6 +121,12 @@ func main() {
 
   log.Debug("Getting database ...")
   database = session.DB("persondb")
+  log.Debug("Logging in to database ...")
+  loginDatabaseError := database.Login(user, password)
+
+  if loginDatabaseError != nil {
+    log.Fatalf(1, "Failed to login to database: %s", loginDatabaseError)
+  }
 
   router := mux.NewRouter()
   router.HandleFunc("/people", GetPeople).Methods("GET")
