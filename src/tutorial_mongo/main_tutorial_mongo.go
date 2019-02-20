@@ -10,6 +10,7 @@ import (
     "crypto/x509"
     "crypto/tls"
     "io/ioutil"
+    "net"
     mgo "gopkg.in/mgo.v2"
     bson "gopkg.in/mgo.v2/bson"
 )
@@ -105,13 +106,30 @@ func connectToMongo(url string, pemFile string) (*mgo.Session, error) {
 
   certsFromPemFile := x509.NewCertPool()
 
+  log.Debug("Getting PEM file ...")
   if pemFileBytes, err := ioutil.ReadFile(pemFile); err == nil {
     certsFromPemFile.AppendCertsFromPEM(pemFileBytes)
   } else {
     log.Fatalf(1, "Failed to read certs from '%s', get errors: %s", pemFile, err)
   }
 
+  tlsConfig := &tls.Config{}
 
+  // TODO: I think this needs to filter out the client cert
+  tlsConfig.RootCAs = certsFromPemFile
+
+  dialInfo, err := mgo.ParseURL(url)
+  dialInfo.DialServer = func(addr *mgo.ServerAddr) (net.Conn, error) {
+    log.Debug("DialServer function, connecting to %s", addr.String())
+    conn, err := tls.Dial("tcp", addr.String(), tlsConfig)
+    log.Debug("Connection error: %s", err)
+    return conn, err
+  }
+
+  log.Debug("Connecting to mongo server using SSL")
+  session, err := mgo.DialWithInfo(dialInfo)
+  log.Debug("Connecting complete")
+  return session, err
 }
 
 // main function to boot up everything
