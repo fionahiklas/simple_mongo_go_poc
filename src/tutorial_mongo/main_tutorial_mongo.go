@@ -7,6 +7,9 @@ import (
     "net/http"
     "syscall"
     "os"
+    "crypto/x509"
+    "crypto/tls"
+    "io/ioutil"
     mgo "gopkg.in/mgo.v2"
     bson "gopkg.in/mgo.v2/bson"
 )
@@ -71,7 +74,6 @@ func CreatePerson(w http.ResponseWriter, r *http.Request) {
     _ = json.NewDecoder(r.Body).Decode(&person)
     person.ID = params["id"]
 
-
     json.NewEncoder(w).Encode(people)
 }
 
@@ -99,24 +101,33 @@ func init() {
     Logger.LEVEL_CRITICAL, Logger.LEVEL_NONE)
 }
 
+func connectToMongo(url string, pemFile string) (*mgo.Session, error) {
+
+  certsFromPemFile := x509.NewCertPool()
+
+  if pemFileBytes, err := ioutil.ReadFile(pemFile); err == nil {
+    certsFromPemFile.AppendCertsFromPEM(pemFileBytes)
+  } else {
+    log.Fatalf(1, "Failed to read certs from '%s', get errors: %s", pemFile, err)
+  }
+
+
+}
+
 // main function to boot up everything
 func main() {
   argsWithoutProg := os.Args[1:]
 
   log.Debug("Command line arguments: %s", argsWithoutProg)
 
-  host := argsWithoutProg[0]
-  port := argsWithoutProg[1]
-  user := argsWithoutProg[2]
-  password := argsWithoutProg[3]
+  url := argsWithoutProg[0]
+  pemFile := argsWithoutProg[1]
 
-  log.Debug("Host: %s", host)
-  log.Debug("Port: %s", port)
-  log.Debug("User: %s", user)
-  log.Debug("Password: %s", password)
+  log.Debug("Url: %s", url)
+  log.Debug("PemFile: %s", pemFile)
 
   log.Debug("Connecting to MongoDB ...")
-  session, mongoSessionError := mgo.Dial(host + ":" + port)
+  session, mongoSessionError := connectToMongo(url, pemFile)
 
   if mongoSessionError != nil {
     log.Fatalf(1, "Failed to connect to MongoDB: %s", mongoSessionError)
@@ -124,12 +135,6 @@ func main() {
 
   log.Debug("Getting database ...")
   database = session.DB("persondb")
-  log.Debug("Logging in to database ...")
-  loginDatabaseError := database.Login(user, password)
-
-  if loginDatabaseError != nil {
-    log.Fatalf(1, "Failed to login to database: %s", loginDatabaseError)
-  }
 
   router := mux.NewRouter()
   router.HandleFunc("/people", GetPeople).Methods("GET")
