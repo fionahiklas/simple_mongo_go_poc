@@ -96,33 +96,46 @@ var database *mgo.Database
 
 func init() {
   log = new(Logger.Logger)
-  log.Init("Main", "TutorialRest",
+  log.Init("[Main]", "TutorialMongoRest",
     Logger.LEVEL_DEBUG | Logger.LEVEL_INFO |
     Logger.LEVEL_WARN, Logger.LEVEL_ERROR |
     Logger.LEVEL_CRITICAL, Logger.LEVEL_NONE)
 }
 
-func connectToMongo(url string, pemFile string) (*mgo.Session, error) {
+type CertificateFiles struct {
+  KeyFile string
+  CertFile string
+  CAFile string
+}
 
-  certsFromPemFile := x509.NewCertPool()
+func connectToMongo(url string, certificateFiles *CertificateFiles) (*mgo.Session, error) {
 
-  log.Debug("Getting PEM file ...")
-  if pemFileBytes, err := ioutil.ReadFile(pemFile); err == nil {
-    certsFromPemFile.AppendCertsFromPEM(pemFileBytes)
+  caCertsFromPemFile := x509.NewCertPool()
+
+  log.Debug("Getting CA file ...")
+  if caFileBytes, err := ioutil.ReadFile(certificateFiles.CAFile); err == nil {
+    caCertsFromPemFile.AppendCertsFromPEM(caFileBytes)
   } else {
-    log.Fatalf(1, "Failed to read certs from '%s', get errors: %s", pemFile, err)
+    log.Fatalf(1, "Failed to read certs from '%s', get errors: %s", certificateFiles.CAFile, err)
   }
 
-  tlsConfig := &tls.Config{}
+  log.Debug("Getting cert and key")
+  certAndKey, err := tls.LoadX509KeyPair(certificateFiles.CertFile, certificateFiles.KeyFile)
+  if err != nil {
+    log.Fatalf(1, "Failed to load key pair")
+  }
 
-  // TODO: I think this needs to filter out the client cert
-  tlsConfig.RootCAs = certsFromPemFile
+  log.Debug("Creating TLS config ...")
+  tlsConfig := &tls.Config{}
+  tlsConfig.Certificates = []tls.Certificate{certAndKey}
+  tlsConfig.RootCAs = caCertsFromPemFile
+  tlsConfig.BuildNameToCertificate()
 
   dialInfo, err := mgo.ParseURL(url)
   dialInfo.DialServer = func(addr *mgo.ServerAddr) (net.Conn, error) {
     log.Debug("DialServer function, connecting to %s", addr.String())
     conn, err := tls.Dial("tcp", addr.String(), tlsConfig)
-    log.Debug("Connection error: %s", err)
+    if err!= nil { log.Debug("Connection error: %s", err) }
     return conn, err
   }
 
@@ -139,13 +152,20 @@ func main() {
   log.Debug("Command line arguments: %s", argsWithoutProg)
 
   url := argsWithoutProg[0]
-  pemFile := argsWithoutProg[1]
+
+  certificateFiles := &CertificateFiles{}
+  certificateFiles.KeyFile = argsWithoutProg[1]
+  certificateFiles.CertFile = argsWithoutProg[2]
+  certificateFiles.CAFile = argsWithoutProg[3]
+
 
   log.Debug("Url: %s", url)
-  log.Debug("PemFile: %s", pemFile)
+  log.Debug("Key file: %s", certificateFiles.KeyFile)
+  log.Debug("Cert file: %s", certificateFiles.CertFile)
+  log.Debug("CA file: %s", certificateFiles.CAFile)
 
   log.Debug("Connecting to MongoDB ...")
-  session, mongoSessionError := connectToMongo(url, pemFile)
+  session, mongoSessionError := connectToMongo(url, certificateFiles)
 
   if mongoSessionError != nil {
     log.Fatalf(1, "Failed to connect to MongoDB: %s", mongoSessionError)
