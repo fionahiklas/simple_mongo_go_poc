@@ -149,15 +149,16 @@ data rather than using hard-coded values.
 ### Build/install
 
 ```
+go get tutorial_mongo
 go install tutorial_mongo
 ```
 
 ### Run
 
-Pass the connection details for Mongo
+Pass the connection details and keys for connection to Mongo as arguments to the application
 
 ```
-bin/tutorial_mongo localhost 27017 persondb personpass
+bin/tutorial_mongo mongodb://persondb:personpass@mongoserver:27717/persondb ../mongo_enterprise_ssl/enterprise_mongo_client/pki/private/mongoclient.key ../mongo_enterprise_ssl/enterprise_mongo_ca/pki/issued/mongoclient.crt ../mongo_enterprise_ssl/enterprise_mongo_ca/pki/ca.crt
 ```
 
 You can make curl requests to retreive data
@@ -171,4 +172,14 @@ The following gets a specific ID (our ID not the internal Mongo one)
 
 ```
 curl -vvv http://localhost:8000/people/00002
+```
+
+## Troubleshooting
+
+### Test with mongo CLI 
+
+Using the mongo command line tools, it should be possible to connect to Mongo using the following
+
+```
+mongo --ssl --port 27717 --host mongoserver admin --verbose --sslCAFile ../enterprise_mongo_ca/pki/ca.crt --sslPEMKeyFile mongoclient-key-crt.pem -u admin -p adminpassword
 ```
